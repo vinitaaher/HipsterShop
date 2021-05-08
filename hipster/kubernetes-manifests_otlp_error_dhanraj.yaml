@@ -1,0 +1,651 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      hostAliases:
+      - ip: $MY_IP
+        hostnames:
+        - "jaeger"
+      serviceAccountName: default
+      containers:
+        - name: server
+          image: dhanraj322/first-repo:latest
+          ports:
+            - containerPort: 8081
+          env:
+            - name: PORT
+              value: "8081"
+            - name: PRODUCT_CATALOG_SERVICE_ADDR
+              value: "productcatlog:4000"
+            - name: CURRENCY_SERVICE_ADDR
+              value: "currency:9000"
+            - name: CART_SERVICE_ADDR
+              value: "cart:80"
+            - name: RECOMMENDATION_SERVICE_ADDR
+              value: "recommended:8080"
+            - name: SHIPPING_SERVICE_ADDR
+              value: "shipping:50051"
+            - name: CHECKOUT_SERVICE_ADDR
+              value: "checkout:5050"
+            - name: AD_SERVICE_ADDR
+              value: "ad:9555"
+            - name: EXPORT_TYPE
+              value: "OTLP"
+            - name: JAEGER_ENDPOINT
+              value: "http://jaeger:14268/api/traces"
+            - name: OTLP_ENDPOINT
+              value: "jaeger:55680"
+            - name: SERVICE_NAME
+              value: "frontend"
+            - name: JAEGER_USER
+              value: "LMSTv2 eNezr47MIT982R465yI9"
+            - name: JAEGER_PASSWORD
+              value: "abcd"
+            - name: SERVICE_NAMESPACE
+              value: $SERVICE_NAMESPACE
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8081
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: currency
+spec:
+  selector:
+    matchLabels:
+      app: currency
+  template:
+    metadata:
+      labels:
+        app: currency
+    spec:
+      hostAliases:
+      - ip: $MY_IP
+        hostnames:
+        - "jaeger"
+      serviceAccountName: default
+      containers:
+        - name: server
+          image: vinitaaher/hipstershop:currency_new
+          ports:
+            - containerPort: 9000
+          env:
+            - name: PORT
+              value: "9000"
+            - name: SERVICE_NAME
+              value: "currency"
+            - name: USER_NAME
+              value: "LMSTv2 eNezr47MIT982R465yI9"
+            - name: PASSWORD
+              value: "abcd"
+            - name: EXPORT_TYPE
+              value: "OTLP"
+            - name: JAEGER_ENDPOINT
+              value: "http://jaeger:14268/api/traces"
+            - name: OTLP_ENDPOINT
+              value: "http://jaeger:55680"
+            - name: SERVICE_NAMESPACE
+              value: $SERVICE_NAMESPACE
+          resources:
+            requests:
+              cpu: 100m
+              memory: 220Mi
+            limits:
+              cpu: 200m
+              memory: 450Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: currency
+spec:
+  type: ClusterIP
+  selector:
+    app: currency
+  ports:
+    - name: grpc
+      port: 9000
+      targetPort: 9000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: productcatlog
+spec:
+  selector:
+    matchLabels:
+      app: productcatlog
+  template:
+    metadata:
+      labels:
+        app: productcatlog
+    spec:
+      hostAliases:
+      - ip: $MY_IP
+        hostnames:
+        - "jaeger"
+      serviceAccountName: default
+      containers:
+        - name: server
+          image: shraddhadondekar/hipster:productcatalog_new
+          ports:
+            - name: grpc
+              containerPort: 4000
+          env:
+            - name: PORT
+              value: "4000"
+            - name: JAEGER_ENDPOINT
+              value: "http://jaeger:14268/api/traces"
+            - name : EXPORT_TYPE
+              value: "OTLP"
+            - name: OTLP_ENDPOINT
+              value: "jaeger:55680"
+            - name: SERVICE_NAME
+              value: "productcatalog_service"
+            - name: JAEGER_USER
+              value: "LMSTv2 eNezr47MIT982R465yI9"
+            - name: JAEGER_PASSWORD
+              value: "abcd"
+            - name: SERVICE_NAMESPACE
+              value: $SERVICE_NAMESPACE
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: productcatlog
+spec:
+  type: ClusterIP
+  selector:
+    app: productcatlog
+  ports:
+    - name: grpc
+      port: 4000
+      targetPort: 4000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommended
+spec:
+  selector:
+    matchLabels:
+      app: recommended
+  template:
+    metadata:
+      labels:
+        app: recommended
+    spec:
+      hostAliases:
+        - ip: $MY_IP
+          hostnames:
+          - "jaeger"
+      containers:
+        - name: server
+          image: sohamsdeshmukh/tracing01:recommendationservice_app
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: PRODUCT_CATALOG_SERVICE_ADDR
+              value: "productcatlog:4000"
+            - name: USER
+              value: "LMSTv2 PfUWa4x447q5DA4QyJM3"
+            - name: PASSWORD
+              value: "abcd"
+            - name: EXPORT_TYPE
+              value: "OTLP"
+            - name: JAEGER_ENDPOINT
+              value: "http://jaeger:14268/api/traces"
+            - name: OTLP_ENDPOINT
+              value: "jaeger:55680"
+            - name: SERVICE_NAME
+              value: "recommendation"
+            - name: OTEL_SERVICE_NAME
+              value: "Recommendation-Service"
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name        # metadata.name - The pod's name on which service is running.
+            - name: SERVICE_NAMESPACE
+              value: $SERVICE_NAMESPACE
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "host.name=$(MY_POD_NAME),service.namespace=$(SERVICE_NAMESPACE)"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 220Mi
+            limits:
+              cpu: 200m
+              memory: 450Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: recommended
+spec:
+  type: ClusterIP
+  selector:
+    app: recommended
+  ports:
+    - name: grpc
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cart
+spec:
+  selector:
+    matchLabels:
+      app: cart
+  template:
+    metadata:
+      labels:
+        app: cart
+    spec:
+      hostAliases:
+      - ip: $MY_IP
+        hostnames:
+        - "jaeger"
+      containers:
+        - name: server
+          image: vinitaaher/hipstershop:cart_new
+          ports:
+            - containerPort: 80
+          env:
+            - name: AgentHost
+              value: "jaeger"
+            - name: PORT
+              value: "80"
+            - name: EXPORT_TYPE
+              value: "OTLP"
+            - name: OTLP_ENDPOINT
+              value: "jaeger:55680"
+            - name: JAEGER_ENDPOINT
+              value: "http://jaeger:14268/api/traces"
+            - name: JAEGER_SERVICE_NAME
+              value: "CART"
+            - name: JAEGER_USER
+              value: "LMSTv2 eNezr47MIT982R465yI9"
+            - name: SERVICE_NAME
+              value: "cart-service"
+            - name: JAEGER_PASSWORD
+              value: "abcd"
+            - name: SERVICE_NAMESPACE
+              value: $SERVICE_NAMESPACE
+          resources:
+            requests:
+              cpu: 100m
+              memory: 220Mi
+            limits:
+              cpu: 200m
+              memory: 450Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cart
+spec:
+  type: ClusterIP
+  selector:
+    app: cart
+  ports:
+    - name: grpc
+      port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shipping
+spec:
+  selector:
+    matchLabels:
+      app: shipping
+  template:
+    metadata:
+      labels:
+        app: shipping
+    spec:
+      hostAliases:
+        - ip: $MY_IP
+          hostnames:
+          - "jaeger"        
+      containers:
+        - name: server
+          image: shraddhadondekar/hipster:shipping_new
+          ports:
+            - containerPort: 50051
+          env:
+            - name: PORT
+              value: "50051"
+            - name: EXPORT_TYPE
+              value: "OTLP"
+            - name: JAEGER_ENDPOINT
+              value: "http://jaeger:14268/api/traces"
+            - name: OTLP_ENDPOINT
+              value: "jaeger:55680"
+            - name: SERVICE_NAME
+              value: "shipping_service"
+            - name: JAEGER_USER
+              value: "LMSTv2 eNezr47MIT982R465yI9"
+            - name: JAEGER_PASSWORD
+              value: "abcd"
+            - name: SERVICE_NAMESPACE
+              value: $SERVICE_NAMESPACE
+          resources:
+            requests:
+              cpu: 100m
+              memory: 220Mi
+            limits:
+              cpu: 200m
+              memory: 450Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shipping
+spec:
+  type: ClusterIP
+  selector:
+    app: shipping
+  ports:
+    - name: grpc
+      port: 50051
+      targetPort: 50051
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout
+spec:
+  selector:
+    matchLabels:
+      app: checkout
+  template:
+    metadata:
+      labels:
+        app: checkout
+    spec:
+      hostAliases:
+      - ip: $MY_IP
+        hostnames:
+        - "jaeger"
+      containers:
+        - name: server
+          image: shraddhadondekar/hipster:checkout_new
+          ports:
+            - containerPort: 5050
+          env:
+            - name: PORT
+              value: "5050"
+            - name: PRODUCT_CATALOG_SERVICE_ADDR
+              value: "productcatlog:4000"
+            - name: SHIPPING_SERVICE_ADDR
+              value: "shipping:50051"
+            - name: PAYMENT_SERVICE_ADDR
+              value: "payment:8011"
+            - name: CURRENCY_SERVICE_ADDR
+              value: "currency:9000"
+            - name: CART_SERVICE_ADDR
+              value: "cart:80"
+            - name: EMAIL_SERVICE_ADDR
+              value: "email:4009"
+            - name: EXPORT_TYPE
+              value: "OTLP"
+            - name: JAEGER_ENDPOINT
+              value: "http://jaeger:14268/api/traces"
+            - name: OTLP_ENDPOINT
+              value: "jaeger:55680"
+            - name: SERVICE_NAME
+              value: "checkoutservice"
+            - name: JAEGER_USER
+              value: "LMSTv2 eNezr47MIT982R465yI9"
+            - name: JAEGER_PASSWORD
+              value: "abcd"
+            - name: SERVICE_NAMESPACE
+              value: $SERVICE_NAMESPACE
+          resources:
+            requests:
+              cpu: 100m
+              memory: 220Mi
+            limits:
+              cpu: 200m
+              memory: 450Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: checkout
+spec:
+  type: ClusterIP
+  selector:
+    app: checkout
+  ports:
+    - name: grpc
+      port: 5050
+      targetPort: 5050
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment
+spec:
+  selector:
+    matchLabels:
+      app: payment
+  template:
+    metadata:
+      labels:
+        app: payment
+    spec:
+      hostAliases:
+      - ip: $MY_IP
+        hostnames:
+        - "jaeger"
+      containers:
+        - name: server
+          image: dhanraj322/paymentservice:latest
+          ports:
+            - containerPort: 8011
+          env:
+            - name: PORT
+              value: "8011"
+            - name: SERVICE_NAME
+              value: "Payment"
+            - name: USER_NAME
+              value: "LMSTv2 eNezr47MIT982R465yI9"
+            - name: PASSWORD
+              value: "abcd"
+            - name: EXPORT_TYPE
+              value: "OTLP"
+            - name: ENDPOINT
+              value: "http://jaeger:14268/api/traces"
+            - name: OTLP_ENDPOINT
+              value: "http://jaeger:55680"
+            - name: SERVICE_NAMESPACE
+              value: $SERVICE_NAMESPACE
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 220Mi
+            limits:
+              cpu: 200m
+              memory: 450Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment
+spec:
+  type: ClusterIP
+  selector:
+    app: payment
+  ports:
+    - name: grpc
+      port: 8011
+      targetPort: 8011
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ad
+spec:
+  selector:
+    matchLabels:
+      app: ad
+  template:
+    metadata:
+      labels:
+        app: ad
+    spec:
+      hostAliases:
+      - ip: $MY_IP
+        hostnames:
+        - "jaeger"
+        - "localhost"
+      serviceAccountName: default
+      containers:
+        - name: server
+          image: vinitaaher/hipstershop:ad_new
+          ports:
+            - containerPort: 9555
+          env:
+            - name: PORT
+              value: "9555"
+            - name: EXPORTER
+              value: "otlp"
+            - name: EXPORTER_ENDPOINT
+              value: "jaeger:55681"
+            - name : SERVICE_NAME
+              value: "AdService"
+            - name: HOST_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name     # metadata.name - The pod's name on which service is running.
+            - name: SERVICE_NAMESPACE
+              value: $SERVICE_NAMESPACE
+          resources:
+            requests:
+              cpu: 200m
+              memory: 180Mi
+            limits:
+              cpu: 300m
+              memory: 300Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ad
+spec:
+  type: ClusterIP
+  selector:
+    app: ad
+  ports:
+    - name: grpc
+      port: 9555
+      targetPort: 9555
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: email
+spec:
+  selector:
+    matchLabels:
+      app: email
+  template:
+    metadata:
+      labels:
+        app: email
+    spec:
+      hostAliases:
+      - ip: $MY_IP
+        hostnames:
+        - "jaeger"
+      serviceAccountName: default
+      containers:
+        - name: server
+          image: sohamsdeshmukh/tracing01:emailservice_app
+          ports:
+            - containerPort: 4009
+          env:
+            - name: PORT
+              value: "4009"
+            - name: USER
+              value: "LMSTv2 PfUWa4x447q5DA4QyJM3"
+            - name: PASSWORD
+              value: "abcd"
+            - name: EXPORT_TYPE
+              value: "OTLP"
+            - name: OTLP_ENDPOINT
+              value: "jaeger:55680"
+            - name: SERVICE_NAME
+              value: "emailservice"
+            - name: OTEL_SERVICE_NAME
+              value: "Email_Service"
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name     # metadata.name - The pod's name on which service is running.
+            - name: SERVICE_NAMESPACE
+              value: $SERVICE_NAMESPACE
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "host.name=$(MY_POD_NAME),service.namespace=$(SERVICE_NAMESPACE)"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 180Mi
+            limits:
+              cpu: 300m
+              memory: 300Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: email
+spec:
+  type: ClusterIP
+  selector:
+    app: email
+  ports:
+    - name: grpc
+      port: 4009
+      targetPort: 4009
